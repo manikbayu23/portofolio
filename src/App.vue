@@ -87,7 +87,7 @@ const openLink = (link) => {
 <template>
   <div :class="{ 'dark': isDarkMode }">
     <!-- Navbar (sama seperti sebelumnya) -->
-    <nav class="bg-white fixed w-full top-0 z-50 transition-colors duration-300 shadow-md"
+    <nav class="fixed w-full top-0 z-50 transition-colors duration-300 shadow-md"
       :class="isDarkMode ? 'bg-gray-900' : 'bg-white'">
       <div class="container mx-auto px-6 py-4 flex justify-between items-center">
         <h1 class="text-xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-800'">Manik<span
