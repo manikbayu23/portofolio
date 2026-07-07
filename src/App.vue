@@ -1,68 +1,71 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import gsap from 'gsap'
 
-// State untuk dark mode
-const isDarkMode = ref(false)
+const isDarkMode = ref(true)
 const isScrolled = ref(false)
-
-const navPositionClass = computed(() => isScrolled.value ? 'top-0' : 'top-4')
-
-// State untuk mobile menu
 const isMobileMenuOpen = ref(false)
+const route = useRoute()
+const router = useRouter()
+const isLoggedIn = ref(false)
+
+const checkLoginStatus = () => {
+  isLoggedIn.value = !!localStorage.getItem('access_token')
+}
+
+// Watch rute berubah untuk memantau status login
+watch(() => route.path, () => {
+  checkLoginStatus()
+})
+
+const handleLogout = () => {
+  localStorage.removeItem('user')
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  isLoggedIn.value = false
+  closeMobileMenu()
+  router.push('/')
+}
 
 const handleScroll = () => {
-  isScrolled.value = window.scrollY > 20
+  isScrolled.value = window.scrollY > 30
 }
 
-// Toggle dark mode
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark')
-    localStorage.setItem('darkMode', 'enabled')
-  } else {
-    document.documentElement.classList.remove('dark')
-    localStorage.setItem('darkMode', 'disabled')
-  }
+  document.documentElement.classList.toggle('dark', isDarkMode.value)
+  localStorage.setItem('darkMode', isDarkMode.value ? 'enabled' : 'disabled')
 }
 
-// Toggle mobile menu
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
 
-// Close mobile menu when clicking on a link
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
 }
 
-// Inisialisasi AOS
 onMounted(() => {
-  const savedDarkMode = localStorage.getItem('darkMode')
-  if (savedDarkMode === 'enabled') {
-    isDarkMode.value = true
-    document.documentElement.classList.add('dark')
-  } else if (savedDarkMode === 'disabled') {
+  const saved = localStorage.getItem('darkMode')
+  if (saved === 'disabled') {
     isDarkMode.value = false
     document.documentElement.classList.remove('dark')
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  } else {
+    // Default dark
     isDarkMode.value = true
     document.documentElement.classList.add('dark')
   }
 
-  // Inisialisasi AOS
-  if (typeof AOS !== 'undefined') {
-    AOS.init({
-      duration: 800,
-      once: true,
-      offset: 100,
-      easing: 'ease-in-out'
-    })
-  }
-
+  checkLoginStatus()
   handleScroll()
   window.addEventListener('scroll', handleScroll, { passive: true })
+
+  // Entrance animation
+  gsap.fromTo('.nav-container',
+    { y: -80, opacity: 0 },
+    { y: 0, opacity: 1, duration: 1, ease: 'power4.out', delay: 0.1 }
+  )
 })
 
 onUnmounted(() => {
@@ -71,118 +74,142 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div :class="{ 'dark': isDarkMode }">
-    <nav
-      class="fixed inset-x-0 z-50 mx-2 md:mx-6 transition-all duration-300 ease-out rounded-3xl border backdrop-blur-xl"
-      :class="[
-        navPositionClass,
-        isDarkMode
-          ? 'bg-gray-950/80 border-gray-800/60 text-gray-100 shadow-2xl'
-          : 'bg-white/80 border-white/70 text-gray-900 shadow-2xl'
-      ]">
-      <div class=" w-full px-4 md:px-6 py-4 flex justify-between items-center">
-        <h1 class="text-xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-800'">Manik<span
-            class="text-blue-600">Bayu</span></h1>
+  <div :class="{ 'dark': isDarkMode }" class="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
 
-        <div class="flex items-center gap-4">
-          <button @click="toggleDarkMode" class="p-2 rounded-lg transition"
-            :class="isDarkMode ? 'bg-gray-800 text-gray-300 hover:text-blue-400' : 'bg-gray-100 text-gray-600 hover:text-blue-600'">
-            <i v-if="!isDarkMode" class="fas fa-moon text-xl"></i>
-            <i v-else class="fas fa-sun text-xl"></i>
-          </button>
+    <!-- ===== NAVBAR ===== -->
+    <header class="fixed top-0 inset-x-0 z-50">
+      <div class="nav-container mx-auto transition-all duration-500 ease-out"
+        :class="[
+          isScrolled
+            ? 'max-w-4xl mt-3 px-4'
+            : 'max-w-7xl mt-0 px-0'
+        ]">
+        <nav class="flex items-center justify-between px-6 py-3.5 border transition-all duration-500"
+          :class="[
+            isScrolled ? 'rounded-2xl shadow-2xl' : 'rounded-none border-x-0 border-t-0',
+            isDarkMode
+              ? 'bg-slate-950/85 backdrop-blur-xl border-slate-800/80 text-white'
+              : 'bg-white/90 backdrop-blur-xl border-slate-200/80 text-slate-800'
+          ]">
 
-          <div class="space-x-6 hidden md:flex items-center">
-            <RouterLink to="/" class="transition"
-              :class="isDarkMode ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'">Home
-            </RouterLink>
-            <RouterLink to="/chat-bot" class="transition"
-              :class="isDarkMode ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'">Chat Bot
+          <!-- Logo -->
+          <RouterLink to="/" class="flex items-center gap-2.5 group select-none shrink-0">
+            <img src="/icon-192.png" alt="MB Brand Logo" class="w-8 h-8 rounded-xl object-cover shadow-md" />
+            <span class="text-base font-bold tracking-tight">
+              Manik<span class="text-blue-500 dark:text-cyan-400">Bayu</span>
+            </span>
+          </RouterLink>
+
+          <!-- Nav Links (Desktop) -->
+          <div class="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+            <RouterLink
+              v-for="link in [{ to: '/', label: 'Home' }, { to: '/chat-bot', label: 'Chat Bot' }]"
+              :key="link.to"
+              :to="link.to"
+              class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
+              :class="[
+                route.path === link.to
+                  ? isDarkMode
+                    ? 'bg-slate-800 text-cyan-400'
+                    : 'bg-blue-50 text-blue-600'
+                  : isDarkMode
+                    ? 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              ]">
+              {{ link.label }}
             </RouterLink>
           </div>
 
-          <button @click="toggleMobileMenu" class="md:hidden" :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">
-            <i class="fas fa-bars text-2xl"></i>
-          </button>
+          <!-- Actions (Desktop) -->
+          <div class="flex items-center gap-2">
+            <!-- Dark Mode Toggle -->
+            <button @click="toggleDarkMode"
+              class="p-2.5 rounded-xl border transition-all duration-300"
+              :class="isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
+                : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'">
+              <i v-if="isDarkMode" class="fas fa-sun text-sm"></i>
+              <i v-else class="fas fa-moon text-sm"></i>
+            </button>
 
-          <!-- Mobile: icon-only login -->
-          <RouterLink to="/login"
-            class="md:hidden ml-2 p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm">
-            <i class="fas fa-sign-in-alt"></i>
-          </RouterLink>
+            <!-- Login / Logout Button (Desktop) -->
+            <button v-if="isLoggedIn" @click="handleLogout"
+              class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 hover:scale-[1.03] shadow-md border bg-slate-950 border-slate-800 text-rose-500 hover:bg-slate-900 hover:text-rose-600 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/20 cursor-pointer">
+              <i class="fas fa-sign-out-alt text-xs"></i>
+              Logout
+            </button>
+            <RouterLink v-else to="/login"
+              class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 hover:scale-[1.03] shadow-md"
+              :class="isDarkMode
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'">
+              <i class="fas fa-sign-in-alt text-xs"></i>
+              Login
+            </RouterLink>
 
-          <!-- Desktop: fancy login button -->
-          <RouterLink to="/login"
-            class="ml-2 hidden md:inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold hover:from-blue-600 hover:to-indigo-700 transform hover:-translate-y-0.5 transition shadow-lg">
-            <i class="fas fa-sign-in-alt mr-2"></i> Login
-          </RouterLink>
-        </div>
+            <!-- Mobile Hamburger -->
+            <button @click="toggleMobileMenu"
+              class="md:hidden p-2.5 rounded-xl border transition-all"
+              :class="isDarkMode ? 'border-slate-800 text-slate-300 hover:bg-slate-800' : 'border-slate-200 text-slate-600 hover:bg-slate-100'">
+              <i class="fas text-sm" :class="isMobileMenuOpen ? 'fa-times' : 'fa-bars'"></i>
+            </button>
+          </div>
+
+        </nav>
+
+        <!-- Mobile Menu Dropdown -->
+        <Transition
+          enter-active-class="transition duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-2"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="opacity-100 translate-y-0"
+          leave-to-class="opacity-0 -translate-y-2">
+          <div v-if="isMobileMenuOpen"
+            class="md:hidden mt-1 mx-0 p-4 rounded-2xl border shadow-xl space-y-1"
+            :class="isDarkMode ? 'bg-slate-950/95 border-slate-800 text-white' : 'bg-white/98 border-slate-200 text-slate-800'">
+            <RouterLink to="/" @click="closeMobileMenu"
+              class="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition"
+              :class="isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'">
+              <i class="fas fa-home w-4 text-center"></i> Home
+            </RouterLink>
+            <RouterLink to="/chat-bot" @click="closeMobileMenu"
+              class="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition"
+              :class="isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'">
+              <i class="fas fa-robot w-4 text-center"></i> Chat Bot
+            </RouterLink>
+            <button v-if="isLoggedIn" @click="handleLogout"
+              class="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition text-rose-500 dark:text-rose-400 text-left hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+              <i class="fas fa-sign-out-alt w-4 text-center"></i> Logout
+            </button>
+            <RouterLink v-else to="/login" @click="closeMobileMenu"
+              class="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition text-blue-500 dark:text-cyan-400">
+              <i class="fas fa-sign-in-alt w-4 text-center"></i> Login
+            </RouterLink>
+          </div>
+        </Transition>
       </div>
+    </header>
 
-      <div v-show="isMobileMenuOpen" class="md:hidden pb-4 px-6 flex flex-col space-y-3 transition-colors duration-300"
-        :class="isDarkMode ? 'bg-gray-900' : 'bg-white'">
-        <RouterLink to="/" @click="closeMobileMenu" class="transition py-2 flex items-center gap-2"
-          :class="isDarkMode ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'">Home
-        </RouterLink>
-        <RouterLink to="/chat-bot" @click="closeMobileMenu" class="transition py-2 flex items-center gap-2"
-          :class="isDarkMode ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'">Chat Bot
-        </RouterLink>
-        <RouterLink to="/login" @click="closeMobileMenu" class="transition py-2 flex items-center gap-2"
-          :class="isDarkMode ? 'text-gray-300 hover:text-blue-400' : 'text-gray-600 hover:text-blue-600'">
-          <i class="fas fa-sign-in-alt"></i> Login
-        </RouterLink>
-      </div>
-    </nav>
-
-    <main>
+    <!-- Main Content -->
+    <main class="pt-20">
       <RouterView v-slot="{ Component }">
         <component :is="Component" :isDarkMode="isDarkMode" />
       </RouterView>
     </main>
+
   </div>
 </template>
 
-<style scoped>
+<style>
 * {
+  box-sizing: border-box;
   scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-.hover-scale {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.hover-scale:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #3b82f6;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
-}
-
-/* Dark mode scrollbar */
-.dark ::-webkit-scrollbar-track {
-  background: #1f2937;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #3b82f6;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
 }
 </style>

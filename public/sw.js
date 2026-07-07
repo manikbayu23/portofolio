@@ -33,7 +33,18 @@ self.addEventListener('fetch', (event) => {
             return networkResponse
           })
         })
-        .catch(() => caches.match('/index.html'))
+        .catch((err) => {
+          // Hanya kembalikan index.html jika rute navigasi HTML yang diminta offline
+          if (
+            event.request.mode === 'navigate' ||
+            (event.request.headers.get('accept') &&
+              event.request.headers.get('accept').includes('text/html'))
+          ) {
+            return caches.match('/index.html')
+          }
+          // Biarkan request aset statis lain (js/css/png) fail secara wajar
+          throw err
+        })
     })
   )
 })
