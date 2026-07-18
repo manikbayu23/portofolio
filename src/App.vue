@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import gsap from 'gsap'
+import { clearAuth, scheduleTokenRefresh } from '@/utils/auth'
 
 const isDarkMode = ref(true)
 const isScrolled = ref(false)
@@ -20,9 +21,7 @@ watch(() => route.path, () => {
 })
 
 const handleLogout = () => {
-  localStorage.removeItem('user')
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
+  clearAuth()
   isLoggedIn.value = false
   closeMobileMenu()
   router.push('/')
@@ -58,6 +57,7 @@ onMounted(() => {
   }
 
   checkLoginStatus()
+  scheduleTokenRefresh()
   handleScroll()
   window.addEventListener('scroll', handleScroll, { passive: true })
 

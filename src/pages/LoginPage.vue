@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import gsap from 'gsap'
+import { scheduleTokenRefresh } from '@/utils/auth'
 
 const props = defineProps({ isDarkMode: Boolean })
 const router = useRouter()
@@ -38,6 +39,13 @@ const handleLogin = async () => {
       localStorage.setItem('user', JSON.stringify(data.data.user))
       localStorage.setItem('access_token', data.data.access_token)
       localStorage.setItem('refresh_token', data.data.refresh_token)
+      
+      // Simpan expiration time (default 900 detik / 15 menit jika tidak ada di response)
+      const expiresIn = data.data.expires_in || 900
+      localStorage.setItem('token_expires_at', (Date.now() + expiresIn * 1000).toString())
+
+      // Mulai penjadwalan refresh token
+      scheduleTokenRefresh()
       
       // Redirect ke halaman sebelumnya (jika ada) atau beranda setelah login berhasil
       const redirectPath = router.currentRoute.value.query.redirect || '/'

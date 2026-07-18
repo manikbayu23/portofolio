@@ -48,3 +48,47 @@ self.addEventListener('fetch', (event) => {
     })
   )
 })
+
+// Listen for Web Push Notifications
+self.addEventListener('push', (event) => {
+  let data = { title: 'Pemberitahuan Baru', body: 'Ada pesan baru dari Baydi.' }
+  if (event.data) {
+    try {
+      data = event.data.json()
+    } catch (e) {
+      data = { title: 'Pemberitahuan Baru', body: event.data.text() }
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: data.data || {},
+    vibrate: [100, 50, 100],
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  )
+})
+
+// Open App on Notification Click
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus if window already open
+      for (const client of clientList) {
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus()
+        }
+      }
+      // Otherwise open new window
+      if (clients.openWindow) {
+        return clients.openWindow('/')
+      }
+    })
+  )
+})
+
