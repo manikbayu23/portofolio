@@ -302,7 +302,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="min-h-[85vh] py-12 flex items-center relative">
+  <section class="h-[calc(100vh-5rem)] py-4 flex flex-col relative overflow-hidden">
     <!-- Ambient light effects -->
     <div
       class="absolute top-10 left-10 w-72 h-72 bg-blue-500/5 dark:bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"
@@ -311,9 +311,9 @@ onMounted(() => {
       class="absolute bottom-10 right-10 w-72 h-72 bg-indigo-500/5 dark:bg-purple-500/5 rounded-full blur-3xl pointer-events-none"
     ></div>
 
-    <div class="container mx-auto px-6 max-w-4xl">
+    <div class="container mx-auto px-4 sm:px-6 max-w-4xl h-full flex flex-col overflow-hidden pb-4">
       <div
-        class="chatbot-card rounded-3xl border overflow-hidden shadow-2xl transition-colors duration-500"
+        class="chatbot-card rounded-3xl border overflow-hidden shadow-2xl transition-colors duration-500 h-full flex flex-col"
         :class="
           props.isDarkMode
             ? 'bg-slate-900/60 border-slate-800/80 shadow-slate-950/60'
@@ -395,7 +395,7 @@ onMounted(() => {
         <!-- Chat messages area -->
         <div
           ref="chatContainer"
-          class="h-[400px] overflow-y-auto p-6 space-y-4"
+          class="flex-1 overflow-y-auto p-6 space-y-4"
           :class="props.isDarkMode ? 'bg-slate-950/20' : 'bg-slate-50/20'"
         >
           <div
