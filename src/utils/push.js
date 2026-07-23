@@ -1,7 +1,7 @@
 import { apiFetch } from './api'
 
 const VAPID_PUBLIC_KEY =
-  'BAnmqqhX5lFnE2SR8poHTc2PxhXYMSEsyEEatWFSDyYPbfcVCYvf6GYcFTsqF4zVrs42r2ujBN29cVMTH0ImI3Q'
+  'BKQEAS0hq7Khbxuz3hZoCtlYeGNMktqNZR2OLMeVRT3kksSTI3-m8SKkNaI7a_uRHD1xLkXkagk7daS28rDYRa4'
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)

@@ -21,6 +21,17 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
+  const url = new URL(event.request.url)
+
+  // Jangan cache request ke API Webhook n8n agar data selalu aktual dari database
+  if (url.hostname.includes('n8n.mbwebcreations.my.id') || url.pathname.includes('/webhook')) {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
+  // Hindari caching skema non-http (seperti ekstensi browser)
+  if (!url.protocol.startsWith('http')) return
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {

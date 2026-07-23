@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import gsap from 'gsap'
 import { clearAuth, scheduleTokenRefresh } from '@/utils/auth'
+import baydiLogo from '@/images/baydi.png'
+import ChatWidget from '@/components/ChatWidget.vue'
 
 const isDarkMode = ref(true)
 const isScrolled = ref(false)
@@ -10,6 +12,22 @@ const isMobileMenuOpen = ref(false)
 const route = useRoute()
 const router = useRouter()
 const isLoggedIn = ref(false)
+const isMiniChatOpen = ref(false)
+
+const showBotButton = computed(() => {
+  return isLoggedIn.value && route.path !== '/chat-bot'
+})
+
+const navLinks = computed(() => {
+  const links = [
+    { to: '/', label: 'Home' },
+    { to: '/chat-bot', label: 'Chat Bot' }
+  ]
+  if (isLoggedIn.value) {
+    links.push({ to: '/notification-panel', label: 'Notification Test' })
+  }
+  return links
+})
 
 const checkLoginStatus = () => {
   isLoggedIn.value = !!localStorage.getItem('access_token')
@@ -18,6 +36,7 @@ const checkLoginStatus = () => {
 // Watch rute berubah untuk memantau status login
 watch(() => route.path, () => {
   checkLoginStatus()
+  isMiniChatOpen.value = false
 })
 
 const handleLogout = () => {
@@ -103,7 +122,7 @@ onUnmounted(() => {
           <!-- Nav Links (Desktop) -->
           <div class="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
             <RouterLink
-              v-for="link in [{ to: '/', label: 'Home' }, { to: '/chat-bot', label: 'Chat Bot' }]"
+              v-for="link in navLinks"
               :key="link.to"
               :to="link.to"
               class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
@@ -178,6 +197,11 @@ onUnmounted(() => {
               :class="isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'">
               <i class="fas fa-robot w-4 text-center"></i> Chat Bot
             </RouterLink>
+            <RouterLink v-if="isLoggedIn" to="/notification-panel" @click="closeMobileMenu"
+              class="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition"
+              :class="isDarkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'">
+              <i class="fas fa-bell w-4 text-center"></i> Notification Test
+            </RouterLink>
             <button v-if="isLoggedIn" @click="handleLogout"
               class="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition text-rose-500 dark:text-rose-400 text-left hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
               <i class="fas fa-sign-out-alt w-4 text-center"></i> Logout
@@ -198,6 +222,69 @@ onUnmounted(() => {
       </RouterView>
     </main>
 
+    <!-- Floating Chat Bot Button -->
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-10 scale-90"
+      enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 translate-y-10 scale-90"
+    >
+      <div
+        v-if="showBotButton"
+        class="fixed bottom-6 right-6 z-40 animate-float-slow flex flex-col items-end gap-2"
+      >
+        <!-- Mini Chat Widget Popup -->
+        <Transition
+          enter-active-class="transition duration-300 ease-out"
+          enter-from-class="opacity-0 scale-95 translate-y-4"
+          enter-to-class="opacity-100 scale-100 translate-y-0"
+          leave-active-class="transition duration-200 ease-in"
+          leave-from-class="opacity-100 scale-100 translate-y-0"
+          leave-to-class="opacity-0 scale-95 translate-y-4"
+        >
+          <div v-if="isMiniChatOpen" class="origin-bottom-right mb-2">
+            <ChatWidget
+              :isDarkMode="isDarkMode"
+              :isMini="true"
+              @close="isMiniChatOpen = false"
+            />
+          </div>
+        </Transition>
+
+        <!-- Toggle Button -->
+        <button
+          @click="isMiniChatOpen = !isMiniChatOpen"
+          class="relative group flex items-center justify-center w-14 h-14 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
+          aria-label="Tanya Baydi"
+        >
+          <!-- Glowing aura ring -->
+          <span class="absolute inset-0 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-cyan-400 dark:to-blue-500 opacity-40 blur-md group-hover:opacity-75 transition-opacity duration-300 animate-pulse"></span>
+          
+          <!-- Outer ring -->
+          <span class="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 dark:from-cyan-400 dark:to-blue-400 opacity-20 group-hover:opacity-40 transition-opacity duration-300 animate-pulse-ring"></span>
+
+          <!-- Main button circle -->
+          <div class="relative w-12 h-12 rounded-full overflow-hidden border shadow-xl flex items-center justify-center transition-colors duration-500"
+            :class="isDarkMode
+              ? 'bg-slate-900 border-slate-800 shadow-slate-950/80 text-cyan-400'
+              : 'bg-white border-slate-200 shadow-blue-500/15 text-blue-600'">
+            <i v-if="isMiniChatOpen" class="fas fa-times text-lg"></i>
+            <img v-else :src="baydiLogo" alt="Baydi" class="w-9 h-9 rounded-full object-cover" />
+          </div>
+
+          <!-- Tooltip (Only when closed) -->
+          <span v-if="!isMiniChatOpen" class="absolute right-16 scale-0 origin-right transition-all duration-200 group-hover:scale-100 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shadow-md border"
+            :class="isDarkMode
+              ? 'bg-slate-900 border-slate-800 text-cyan-400'
+              : 'bg-white border-slate-200 text-blue-600'">
+            Tanya Baydi
+          </span>
+        </button>
+      </div>
+    </Transition>
+
   </div>
 </template>
 
@@ -211,5 +298,33 @@ body {
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 3s ease-in-out infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>

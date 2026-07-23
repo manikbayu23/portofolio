@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/pages/HomePage.vue'
 import ChatBotPage from '@/pages/ChatBotPage.vue'
 import LoginPage from '@/pages/LoginPage.vue'
+import NotificationPanelPage from '@/pages/NotificationPanelPage.vue'
 import { setRouter, isTokenExpired, refreshAccessToken } from '@/utils/auth'
 
 const router = createRouter({
@@ -12,6 +13,12 @@ const router = createRouter({
       path: '/chat-bot', 
       name: 'ChatBot', 
       component: ChatBotPage,
+      meta: { requiresAuth: true } 
+    },
+    { 
+      path: '/notification-panel', 
+      name: 'NotificationPanel', 
+      component: NotificationPanelPage,
       meta: { requiresAuth: true } 
     },
     { path: '/login', name: 'Login', component: LoginPage }
