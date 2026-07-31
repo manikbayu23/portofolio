@@ -91,19 +91,32 @@ const messages = ref([
 const chatContainer = ref(null)
 
 const highlightDetails = (text) => {
-  let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold">$1</strong>')
+  if (!text) return ''
+  let formatted = text
+
+  // 1. Dukungan jika AI masih mengirim format Markdown (**bold** atau *italic*)
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold">$1</strong>')
   formatted = formatted.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-  
+
+  // 2. Styling khusus tag HTML bawaan Telegram dari AI Agent
+  formatted = formatted.replace(/<b>(.*?)<\/b>/gi, '<b class="font-bold text-slate-900 dark:text-white">$1</b>')
+  formatted = formatted.replace(/<i>(.*?)<\/i>/gi, '<i class="italic">$1</i>')
+  formatted = formatted.replace(/<code>(.*?)<\/code>/gi, '<code class="px-1.5 py-0.5 rounded text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-cyan-400 border border-slate-200 dark:border-slate-700">$1</code>')
+  formatted = formatted.replace(/blockquote>/gi, 'blockquote class="my-2 pl-3 py-1 border-l-4 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 rounded-r-lg text-slate-700 dark:text-slate-300 italic">')
+
+  // 3. Highlight khusus Rupiah / Nominal
   formatted = formatted.replace(
     /(Rp\s?\d+[\d.,]*)/gi,
     '<strong class="font-semibold text-blue-600 dark:text-cyan-400">$1</strong>',
   )
 
+  // 4. Highlight Metode Pembayaran
   formatted = formatted.replace(
     /\((Mandiri|Cash|OVO|Gopay|Dana|BCA|BRI|LinkAja)\)/gi,
     '<span class="px-1.5 py-0.5 ml-1 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">($1)</span>',
   )
 
+  // 5. Highlight Badge Status/Kategori
   formatted = formatted.replace(
     /^(Reminder|Ingat|Jadwal):/gi,
     '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-cyan-400 border border-blue-500/20 mr-1.5"><i class="fas fa-bell"></i> $1</span>',
@@ -124,8 +137,9 @@ const highlightDetails = (text) => {
 
 const formatMessage = (text) => {
   if (!text) return ''
-  let escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const lines = escaped.split('\n')
+  
+  // Dihapus sanitasi replace < & > agar tag HTML dari agent dirender langsung oleh v-html
+  const lines = text.split('\n')
   let html = []
   let inList = false
 
@@ -140,6 +154,7 @@ const formatMessage = (text) => {
       continue
     }
 
+    // Task list belum selesai
     if (trimmed.match(/^(?:-\s+)?\[\s*\]\s+(.*)/)) {
       if (inList) {
         html.push('</ul>')
@@ -153,6 +168,7 @@ const formatMessage = (text) => {
         </div>
       `)
     }
+    // Task list selesai
     else if (trimmed.match(/^(?:-\s+)?\[x\]\s+(.*)/i)) {
       if (inList) {
         html.push('</ul>')
@@ -166,6 +182,7 @@ const formatMessage = (text) => {
         </div>
       `)
     }
+    // List Berpenomoran (1. 2. 3.)
     else if (trimmed.match(/^\d+\.\s+(.*)/)) {
       if (inList) {
         html.push('</ul>')
@@ -181,12 +198,13 @@ const formatMessage = (text) => {
         </div>
       `)
     }
-    else if (trimmed.startsWith('-')) {
+    // List Poin dengan Tanda Hubung / Bullet Point (- / * / •)
+    else if (trimmed.match(/^(?:-|\*|•)\s+(.*)/)) {
       if (!inList) {
         html.push('<ul class="my-2 space-y-2 pl-1">')
         inList = true
       }
-      const content = trimmed.substring(1).trim()
+      const content = trimmed.replace(/^(?:-|\*|•)\s+/, '')
       const formattedContent = highlightDetails(content)
       html.push(`
         <li class="flex items-start gap-2.5 text-xs md:text-sm">
@@ -194,7 +212,9 @@ const formatMessage = (text) => {
           <span class="flex-1">${formattedContent}</span>
         </li>
       `)
-    } else {
+    } 
+    // Paragraf / Ringkasan Biaya / Teks Biasa
+    else {
       if (inList) {
         html.push('</ul>')
         inList = false
@@ -378,7 +398,9 @@ const toggleSpeakMessage = (text, id) => {
 
   stopSpeaking()
 
+  // Membersihkan tag HTML dan format teks khusus sebelum dibaca oleh mesin pembaca suara (TTS)
   let cleanText = text
+    .replace(/<[^>]*>/g, '') // Hapus seluruh tag HTML
     .replace(/\*\*|__/g, '')
     .replace(/\*|_/g, '')
     .replace(/-\s+\[\s*\]\s+/g, '')
@@ -436,8 +458,6 @@ const fetchChatHistory = async () => {
   }
 }
 
-
-
 const navigateToFullChat = () => {
   emit('close')
   router.push('/chat-bot')
@@ -457,7 +477,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   stopSpeaking()
-})</script>
+})
+</script>
 
 <template>
   <div
@@ -504,7 +525,7 @@ onUnmounted(() => {
 
       <!-- Actions -->
       <div class="flex items-center gap-2">
-        <!-- PWA Push Notifications Control (Only shown in full mode or compact on mini) -->
+        <!-- PWA Push Notifications Control -->
         <div v-if="notificationStatus !== 'unsupported'" class="flex items-center">
           <button
             v-if="notificationStatus === 'default'"
