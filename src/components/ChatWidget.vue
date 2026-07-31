@@ -102,7 +102,7 @@ const highlightDetails = (text) => {
   formatted = formatted.replace(/<b>(.*?)<\/b>/gi, '<b class="font-bold text-slate-900 dark:text-white">$1</b>')
   formatted = formatted.replace(/<i>(.*?)<\/i>/gi, '<i class="italic">$1</i>')
   formatted = formatted.replace(/<code>(.*?)<\/code>/gi, '<code class="px-1.5 py-0.5 rounded text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-cyan-400 border border-slate-200 dark:border-slate-700">$1</code>')
-  formatted = formatted.replace(/blockquote>/gi, 'blockquote class="my-2 pl-3 py-1 border-l-4 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 rounded-r-lg text-slate-700 dark:text-slate-300 italic">')
+  formatted = formatted.replace(/<blockquote>/gi, '<blockquote class="my-2 pl-3 py-1 border-l-4 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 rounded-r-lg text-slate-700 dark:text-slate-300 italic">')
 
   // 3. Highlight khusus Rupiah / Nominal
   formatted = formatted.replace(
@@ -137,8 +137,20 @@ const highlightDetails = (text) => {
 
 const formatMessage = (text) => {
   if (!text) return ''
-  
-  // Dihapus sanitasi replace < & > agar tag HTML dari agent dirender langsung oleh v-html
+
+  // Deteksi jika pesan berisi format HTML dari backend
+  const hasHtml = /<[a-z/][\s\S]*>/i.test(text)
+
+  if (hasHtml) {
+    let formatted = highlightDetails(text)
+    // Pasang tag <br> hanya jika tidak ada tag block structural (untuk menjaga layout aslinya)
+    const containsBlockTags = /<\/?(table|tr|td|th|thead|tbody|ul|ol|li|div|p|blockquote)/i.test(text)
+    if (!containsBlockTags) {
+      formatted = formatted.replace(/\n/g, '<br>')
+    }
+    return formatted
+  }
+
   const lines = text.split('\n')
   let html = []
   let inList = false
@@ -162,7 +174,7 @@ const formatMessage = (text) => {
       }
       const content = trimmed.replace(/^(?:-\s+)?\[\s*\]\s+/, '')
       html.push(`
-        <div class="flex items-start gap-2.5 text-xs md:text-sm my-2 text-slate-600 dark:text-slate-400">
+        <div class="flex items-start gap-2.5 text-[13.5px] md:text-sm leading-relaxed my-2 text-slate-600 dark:text-slate-400">
           <i class="far fa-square text-slate-400 dark:text-slate-500 mt-1 flex-shrink-0 text-sm"></i>
           <span class="flex-1">${highlightDetails(content)}</span>
         </div>
@@ -176,7 +188,7 @@ const formatMessage = (text) => {
       }
       const content = trimmed.replace(/^(?:-\s+)?\[x\]\s+/, '')
       html.push(`
-        <div class="flex items-start gap-2.5 text-xs md:text-sm my-2 text-slate-400 line-through decoration-slate-300 dark:decoration-slate-700">
+        <div class="flex items-start gap-2.5 text-[13.5px] md:text-sm leading-relaxed my-2 text-slate-400 line-through decoration-slate-300 dark:decoration-slate-700">
           <i class="fas fa-check-square text-emerald-500 mt-1 flex-shrink-0 text-sm animate-bounce"></i>
           <span class="flex-1">${highlightDetails(content)}</span>
         </div>
@@ -192,7 +204,7 @@ const formatMessage = (text) => {
       const num = numMatch[1]
       const content = numMatch[2]
       html.push(`
-        <div class="flex items-start gap-2.5 text-xs md:text-sm my-2">
+        <div class="flex items-start gap-2.5 text-[13.5px] md:text-sm leading-relaxed my-2">
           <span class="flex-shrink-0 w-5 h-5 rounded-lg bg-blue-500/10 text-blue-600 dark:bg-cyan-500/10 dark:text-cyan-400 font-bold flex items-center justify-center text-[10px]">${num}</span>
           <span class="flex-1 mt-0.5">${highlightDetails(content)}</span>
         </div>
@@ -207,7 +219,7 @@ const formatMessage = (text) => {
       const content = trimmed.replace(/^(?:-|\*|•)\s+/, '')
       const formattedContent = highlightDetails(content)
       html.push(`
-        <li class="flex items-start gap-2.5 text-xs md:text-sm">
+        <li class="flex items-start gap-2.5 text-[13.5px] md:text-sm leading-relaxed">
           <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-cyan-400 mt-2"></span>
           <span class="flex-1">${formattedContent}</span>
         </li>
@@ -227,7 +239,7 @@ const formatMessage = (text) => {
       ) {
         const formattedTotal = highlightDetails(trimmed)
         html.push(`
-          <div class="mt-4 p-3.5 rounded-2xl border bg-emerald-500/5 dark:bg-emerald-500/5 border-emerald-500/15 dark:border-emerald-500/15 text-xs md:text-sm font-semibold flex items-center gap-2.5 text-slate-800 dark:text-slate-200">
+          <div class="mt-4 p-3.5 rounded-2xl border bg-emerald-500/5 dark:bg-emerald-500/5 border-emerald-500/15 dark:border-emerald-500/15 text-[13.5px] md:text-sm leading-relaxed font-semibold flex items-center gap-2.5 text-slate-800 dark:text-slate-200">
             <div class="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
               <i class="fas fa-wallet text-sm"></i>
             </div>
@@ -238,7 +250,7 @@ const formatMessage = (text) => {
       else if (trimmed.toLowerCase().startsWith('total')) {
         const formattedTotal = highlightDetails(trimmed)
         html.push(`
-          <div class="mt-4 p-3.5 rounded-2xl border bg-blue-500/5 dark:bg-cyan-500/5 border-blue-500/15 dark:border-cyan-500/15 text-xs md:text-sm font-semibold flex items-center gap-2.5 text-slate-800 dark:text-slate-200">
+          <div class="mt-4 p-3.5 rounded-2xl border bg-blue-500/5 dark:bg-cyan-500/5 border-blue-500/15 dark:border-cyan-500/15 text-[13.5px] md:text-sm leading-relaxed font-semibold flex items-center gap-2.5 text-slate-800 dark:text-slate-200">
             <div class="w-8 h-8 rounded-xl bg-blue-100 dark:bg-cyan-950/60 flex items-center justify-center text-blue-600 dark:text-cyan-400 flex-shrink-0">
               <i class="fas fa-info-circle text-sm"></i>
             </div>
@@ -248,7 +260,7 @@ const formatMessage = (text) => {
       }
       else {
         const formattedLine = highlightDetails(trimmed)
-        html.push(`<p class="my-1.5 text-xs md:text-sm leading-relaxed">${formattedLine}</p>`)
+        html.push(`<p class="my-1.5 text-[13.5px] md:text-sm leading-relaxed">${formattedLine}</p>`)
       }
     }
   }
@@ -515,10 +527,14 @@ onUnmounted(() => {
             Baydi
           </h1>
           <p
-            class="text-[10px] flex items-center gap-1"
-            :class="isDarkMode ? 'text-cyan-400' : 'text-blue-600'"
+            class="text-[10px] flex items-center gap-1.5 font-medium"
+            :class="isDarkMode ? 'text-slate-400' : 'text-slate-500'"
           >
-            <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span> Online
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Online
           </p>
         </div>
       </div>
@@ -602,7 +618,7 @@ onUnmounted(() => {
     <!-- Chat messages area -->
     <div
       ref="chatContainer"
-      class="flex-1 overflow-y-auto p-4 space-y-4"
+      class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
       :class="isDarkMode ? 'bg-slate-950/20' : 'bg-slate-50/20'"
     >
       <div v-if="isHistoryLoading" class="h-full flex flex-col items-center justify-center py-10 space-y-3">
@@ -637,16 +653,16 @@ onUnmounted(() => {
           <div class="flex flex-col gap-1 max-w-[calc(100%-2rem)]">
             <!-- Bubble -->
             <div
-              class="p-3 rounded-2xl text-xs leading-relaxed border shadow-sm"
+              class="p-3.5 md:p-4 border shadow-sm"
               :class="
                 message.role === 'user'
-                  ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 border-blue-600 text-white rounded-tr-none'
+                  ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 dark:from-cyan-500 dark:to-blue-600 text-white border-0 rounded-2xl rounded-tr-xs text-[13.5px] md:text-sm leading-relaxed'
                   : isDarkMode
-                    ? 'bg-slate-900/80 border-slate-800 text-slate-100 rounded-tl-none'
-                    : 'bg-white border-slate-200 text-slate-800 rounded-tl-none'
+                    ? 'bg-slate-900/90 border-slate-800/80 text-slate-100 rounded-2xl rounded-tl-xs text-[13.5px] md:text-sm leading-relaxed'
+                    : 'bg-white border-slate-200/80 text-slate-800 rounded-2xl rounded-tl-xs text-[13.5px] md:text-sm leading-relaxed'
               "
             >
-              <div v-if="message.role === 'assistant'" v-html="formatMessage(message.text)"></div>
+              <div v-if="message.role === 'assistant'" class="chat-content" v-html="formatMessage(message.text)"></div>
               <p v-else class="whitespace-pre-wrap">{{ message.text }}</p>
             </div>
 
@@ -713,30 +729,30 @@ onUnmounted(() => {
 
     <!-- Input Box Area -->
     <div
-      class="p-3 border-t"
+      class="p-4 border-t"
       :class="
         isDarkMode
-          ? 'border-slate-800 bg-slate-950/30'
-          : 'border-slate-100 bg-slate-50/30'
+          ? 'border-slate-800 bg-slate-950/40'
+          : 'border-slate-100 bg-slate-50/40'
       "
     >
-      <form @submit.prevent="sendMessage" class="flex gap-2">
+      <form @submit.prevent="sendMessage" class="flex gap-2.5">
         <input
           v-model="newMessage"
           type="text"
           placeholder="Tanyakan sesuatu..."
           :disabled="isLoading"
-          class="w-full text-xs rounded-xl border px-4 py-3 outline-none transition-all duration-300 disabled:opacity-60"
+          class="w-full text-sm rounded-2xl border px-4 py-3 outline-none transition-all duration-300 disabled:opacity-60"
           :class="
             isDarkMode
-              ? 'bg-slate-950 border-slate-850 text-white focus:border-cyan-400 focus:bg-slate-950'
-              : 'bg-white border-slate-200 text-slate-800 focus:border-blue-600 focus:bg-white'
+              ? 'bg-slate-950 border-slate-800 text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:bg-slate-950 placeholder-slate-500'
+              : 'bg-white border-slate-200 text-slate-800 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:bg-white placeholder-slate-400'
           "
         />
         <button
           type="submit"
           :disabled="isLoading || !newMessage.trim()"
-          class="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-4 py-3 flex items-center justify-center transition-all duration-300 hover:scale-[1.03] disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-blue-500/10 cursor-pointer"
+          class="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-cyan-500 dark:to-blue-600 dark:hover:from-cyan-600 dark:hover:to-blue-700 text-white font-semibold px-4 py-3 flex items-center justify-center transition-all duration-300 hover:scale-[1.03] active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-blue-500/10 cursor-pointer w-12 h-12 flex-shrink-0"
         >
           <i class="fas fa-paper-plane text-xs"></i>
         </button>
@@ -744,3 +760,156 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Scrollbar Kustom */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.25);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.45);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.35);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.55);
+}
+
+/* Styling Elemen HTML Di Dalam Bubble Asisten */
+.chat-content :deep(p) {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.625;
+}
+.chat-content :deep(p:first-child) {
+  margin-top: 0;
+}
+.chat-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+.chat-content :deep(ul) {
+  list-style-type: disc;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1.25rem;
+}
+.chat-content :deep(ol) {
+  list-style-type: decimal;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1.25rem;
+}
+.chat-content :deep(li) {
+  margin-bottom: 0.25rem;
+}
+.chat-content :deep(a) {
+  color: #3b82f6;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.chat-content :deep(a:hover) {
+  color: #2563eb;
+}
+.dark .chat-content :deep(a) {
+  color: #22d3ee;
+}
+.dark .chat-content :deep(a:hover) {
+  color: #06b6d4;
+}
+.chat-content :deep(strong), .chat-content :deep(b) {
+  font-weight: 650;
+}
+.chat-content :deep(em), .chat-content :deep(i) {
+  font-style: italic;
+}
+.chat-content :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  color: #2563eb;
+}
+.dark .chat-content :deep(code) {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #22d3ee;
+}
+.chat-content :deep(pre) {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+.dark .chat-content :deep(pre) {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+.chat-content :deep(pre code) {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  font-size: 0.9em;
+  color: inherit;
+}
+.chat-content :deep(blockquote) {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-left-width: 4px;
+  border-left-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.05);
+  font-style: italic;
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+.dark .chat-content :deep(blockquote) {
+  border-left-color: #06b6d4;
+  background-color: rgba(6, 182, 212, 0.05);
+}
+.chat-content :deep(table) {
+  width: 100%;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.chat-content :deep(th) {
+  background-color: #f1f5f9;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+.dark .chat-content :deep(th) {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+.chat-content :deep(td) {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+.dark .chat-content :deep(td) {
+  border-color: #334155;
+}
+.chat-content :deep(tr:nth-child(even)) {
+  background-color: #f8fafc;
+}
+.dark .chat-content :deep(tr:nth-child(even)) {
+  background-color: #0f172a;
+}
+</style>
